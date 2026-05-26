@@ -228,6 +228,35 @@
       padding-left: 1em;
     }
 
+    .recipe-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25em;
+    }
+
+    .recipe-item a {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .fav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1em;
+      padding: 0.2em 0.4em;
+      line-height: 1;
+    }
+
+    .fav-btn:hover {
+      color: var(--text-main);
+    }
+
+    .fav-btn.is-favorite {
+      color: #f5c542;
+    }
+
     @media (max-width: 768px) {
       body {
         flex-direction: column;
@@ -285,9 +314,38 @@
 
 <script>
   const UNTAGGED = 'Andere';
+  const FAVORITES = 'Favoriten';
+  const FAVORITES_KEY = 'recipes:favorites';
   const HASH_PREFIX = '#/recipe/';
   let allRecipes = [];
   let currentRecipe = null;
+  let favorites = loadFavorites();
+
+  function loadFavorites() {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function saveFavorites() {
+    try {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites]));
+    } catch (e) {
+      console.error('Failed to save favorites', e);
+    }
+  }
+
+  function toggleFavorite(name) {
+    if (favorites.has(name)) favorites.delete(name);
+    else favorites.add(name);
+    saveFavorites();
+    renderRecipeList(filterRecipes(document.getElementById('search').value));
+  }
 
   function loadRecipeList() {
     fetch('/recipes')
@@ -346,30 +404,59 @@
 
   function renderRecipeList(recipes) {
     const list = document.getElementById('recipe-list');
-    list.innerHTML = '';
-    const grouped = groupByTag(recipes);
-    grouped.forEach(([tag, items]) => {
-      const group = document.createElement('details');
-      group.className = 'tag-group';
-      const summary = document.createElement('summary');
-      summary.textContent = `${tag} (${items.length})`;
-      group.appendChild(summary);
-      const ul = document.createElement('ul');
-      items.forEach(r => ul.appendChild(renderRecipeItem(r)));
-      group.appendChild(ul);
-      list.appendChild(group);
+    const openGroups = new Set();
+    list.querySelectorAll('details.tag-group').forEach(d => {
+      if (d.open && d.dataset.label) openGroups.add(d.dataset.label);
     });
+    list.innerHTML = '';
+    const favs = recipes.filter(r => favorites.has(r.name));
+    if (favs.length > 0) {
+      list.appendChild(renderGroup(FAVORITES, favs, openGroups));
+    }
+    groupByTag(recipes).forEach(([tag, items]) => {
+      list.appendChild(renderGroup(tag, items, openGroups));
+    });
+  }
+
+  function renderGroup(label, items, openGroups) {
+    const group = document.createElement('details');
+    group.className = 'tag-group';
+    group.dataset.label = label;
+    if (openGroups && openGroups.has(label)) group.open = true;
+    const summary = document.createElement('summary');
+    summary.textContent = `${label} (${items.length})`;
+    group.appendChild(summary);
+    const ul = document.createElement('ul');
+    items.forEach(r => ul.appendChild(renderRecipeItem(r)));
+    group.appendChild(ul);
+    return group;
   }
 
   function renderRecipeItem(recipe) {
     const item = document.createElement('li');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'recipe-item';
     const link = document.createElement('a');
     link.textContent = recipe.name;
     link.classList.toggle('active', recipe.name === currentRecipe);
     link.onclick = () => {
       selectRecipe(recipe.name, true);
     };
-    item.appendChild(link);
+    const fav = document.createElement('button');
+    fav.type = 'button';
+    fav.className = 'fav-btn';
+    const isFav = favorites.has(recipe.name);
+    fav.classList.toggle('is-favorite', isFav);
+    fav.textContent = isFav ? '★' : '☆';
+    fav.title = isFav ? 'Favorit entfernen' : 'Als Favorit markieren';
+    fav.setAttribute('aria-label', fav.title);
+    fav.onclick = (e) => {
+      e.stopPropagation();
+      toggleFavorite(recipe.name);
+    };
+    wrapper.appendChild(link);
+    wrapper.appendChild(fav);
+    item.appendChild(wrapper);
     return item;
   }
 

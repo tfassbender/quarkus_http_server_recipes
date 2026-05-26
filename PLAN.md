@@ -25,7 +25,7 @@ Ordered roughly by dependency / value. Each item is small enough to ship on its 
 - Use `location.hash` (`#/recipe/<name>`) so no server routing changes are needed.
 - On load: read hash, select+fetch that recipe. On selection: update hash. Listen for `hashchange` for back/forward.
 
-## 5. Favorites in localStorage
+## 5. Favorites in localStorage — DONE
 
 - Star icon next to each recipe in the sidebar; toggling persists `recipes:favorites` (JSON array of names) in `localStorage`.
 - Render a "Favorites" section at the top of the sidebar.
