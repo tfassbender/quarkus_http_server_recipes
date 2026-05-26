@@ -285,6 +285,7 @@
 
 <script>
   const UNTAGGED = 'Andere';
+  const HASH_PREFIX = '#/recipe/';
   let allRecipes = [];
   let currentRecipe = null;
 
@@ -294,11 +295,37 @@
       .then(data => {
         allRecipes = data;
         renderRecipeList(data);
+        const fromHash = recipeFromHash();
+        if (fromHash) selectRecipe(fromHash, false);
       })
       .catch(error => {
         document.getElementById('recipe-list').textContent = 'Error loading recipes.';
         console.error(error);
       });
+  }
+
+  function recipeFromHash() {
+    const hash = window.location.hash || '';
+    if (!hash.startsWith(HASH_PREFIX)) return null;
+    try {
+      return decodeURIComponent(hash.substring(HASH_PREFIX.length));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function selectRecipe(name, updateHash) {
+    currentRecipe = name;
+    loadRecipe(name);
+    document.querySelectorAll('#recipe-list a').forEach(a => {
+      a.classList.toggle('active', a.textContent === name);
+    });
+    if (updateHash) {
+      const target = HASH_PREFIX + encodeURIComponent(name);
+      if (window.location.hash !== target) {
+        window.location.hash = target;
+      }
+    }
   }
 
   function groupByTag(recipes) {
@@ -340,11 +367,7 @@
     link.textContent = recipe.name;
     link.classList.toggle('active', recipe.name === currentRecipe);
     link.onclick = () => {
-      currentRecipe = recipe.name;
-      loadRecipe(recipe.name);
-      document.querySelectorAll('#recipe-list a').forEach(a => {
-        a.classList.toggle('active', a.textContent === recipe.name);
-      });
+      selectRecipe(recipe.name, true);
     };
     item.appendChild(link);
     return item;
@@ -412,6 +435,11 @@
       document.body.classList.remove('sidebar-hidden');
     };
   }
+
+  window.addEventListener('hashchange', () => {
+    const name = recipeFromHash();
+    if (name && name !== currentRecipe) selectRecipe(name, false);
+  });
 
   loadRecipeList();
   setupSearch();

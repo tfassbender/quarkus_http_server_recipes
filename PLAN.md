@@ -20,7 +20,7 @@ Ordered roughly by dependency / value. Each item is small enough to ship on its 
 - Single shared `RecipesMarkdownFormatter` (move to `@ApplicationScoped` or static), reuse parser/renderer.
 - Cache rendered HTML keyed by filename; invalidate when `Files.getLastModifiedTime` changes. `ConcurrentHashMap<String, CacheEntry(mtime, html)>` is enough — no eviction needed for this scale.
 
-## 4. Deep-linkable URLs
+## 4. Deep-linkable URLs — DONE
 
 - Use `location.hash` (`#/recipe/<name>`) so no server routing changes are needed.
 - On load: read hash, select+fetch that recipe. On selection: update hash. Listen for `hashchange` for back/forward.
