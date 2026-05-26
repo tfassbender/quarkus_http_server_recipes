@@ -36,7 +36,7 @@ Ordered roughly by dependency / value. Each item is small enough to ship on its 
 - Replace per-character substring filter with: split query on whitespace, each token must match either the name (substring, case-insensitive) or a tag (exact, with or without leading `#`).
 - Keep the input responsive but debounce to ~100ms once tag-grouping is in place.
 
-## 7. Help dialog
+## 7. Help dialog — DONE
 
 - Small `?` button in the sidebar header opens a modal explaining the recipe file format: where to put the tag line, the exact `<!--tags: #tag1 #tag2-->` syntax, and which markdown features are supported (tables in particular).
 - Pure static content in `index.html`; no backend.

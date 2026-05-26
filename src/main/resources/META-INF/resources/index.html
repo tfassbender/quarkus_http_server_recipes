@@ -101,6 +101,68 @@
       display: inline-flex;
     }
 
+    #help-dialog {
+      background-color: var(--bg-sidebar);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1.5em;
+      max-width: 600px;
+      width: 90%;
+      box-sizing: border-box;
+    }
+
+    #help-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    #help-dialog h2 {
+      margin-top: 0;
+    }
+
+    #help-dialog h3 {
+      margin-top: 1.2em;
+      margin-bottom: 0.4em;
+      font-size: 1em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    #help-dialog code,
+    #help-dialog pre {
+      background-color: #1a1a1a;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      padding: 0.1em 0.3em;
+      font-family: monospace;
+    }
+
+    #help-dialog pre {
+      padding: 0.6em 0.8em;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    #help-dialog .dialog-footer {
+      margin-top: 1.2em;
+      text-align: right;
+    }
+
+    #help-dialog button.close {
+      background-color: var(--bg-accent);
+      color: #fff;
+      border: none;
+      padding: 0.5em 1em;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+
+    #help-dialog button.close:hover {
+      filter: brightness(1.15);
+    }
+
     ul {
       list-style: none;
       padding: 0;
@@ -298,6 +360,7 @@
     <div class="header-buttons">
       <button id="expand-all" class="icon-button" title="Alle ausklappen" aria-label="Alle ausklappen">&#43;</button>
       <button id="collapse-all" class="icon-button" title="Alle einklappen" aria-label="Alle einklappen">&#8722;</button>
+      <button id="show-help" class="icon-button" title="Hilfe" aria-label="Hilfe">?</button>
       <button id="hide-sidebar" class="icon-button" title="Seitenleiste ausblenden" aria-label="Seitenleiste ausblenden">&times;</button>
     </div>
   </div>
@@ -311,6 +374,40 @@
 <div id="content">
   <div id="recipe-content">Wähle ein Rezept aus der Liste aus um es anzuzeigen.</div>
 </div>
+
+<dialog id="help-dialog">
+  <h2>Hilfe &ndash; Rezeptdateien</h2>
+
+  <p>Rezepte werden als einfache <code>.txt</code>-Dateien im konfigurierten Rezepteverzeichnis abgelegt. Der Dateiname (ohne <code>.txt</code>) wird als Rezeptname angezeigt.</p>
+
+  <h3>Tags (optional)</h3>
+  <p>Tags werden in der <strong>ersten Zeile</strong> der Datei als HTML-Kommentar angegeben. So werden sie weder im gerenderten Rezept angezeigt noch als Markdown-Überschrift interpretiert.</p>
+  <pre>&lt;!--tags: #pasta #vegetarisch--&gt;
+# Spaghetti Aglio e Olio
+...</pre>
+  <p>Mehrere Tags werden durch Leerzeichen getrennt. Rezepte ohne Tag-Zeile landen in der Gruppe <em>Andere</em>.</p>
+
+  <h3>Markdown-Inhalt</h3>
+  <p>Der Rest der Datei ist normales Markdown. Unterstützt werden u.&nbsp;a.:</p>
+  <ul>
+    <li>Überschriften (<code># Titel</code>, <code>## Abschnitt</code>, &hellip;)</li>
+    <li>Listen und Aufzählungen</li>
+    <li>Fett (<code>**text**</code>) und kursiv (<code>*text*</code>)</li>
+    <li>Tabellen (z.&nbsp;B. für Zutatenlisten)</li>
+    <li>Links und Codeblöcke</li>
+  </ul>
+
+  <h3>Suche &amp; Favoriten</h3>
+  <ul>
+    <li>Suche: mehrere Begriffe (UND-Verknüpfung). <code>#tag</code> sucht exakt nach einem Tag.</li>
+    <li>Favoriten werden lokal im Browser gespeichert (kein Server).</li>
+    <li>Rezepte sind direkt verlinkbar &ndash; die URL enthält das aktuell ausgewählte Rezept.</li>
+  </ul>
+
+  <div class="dialog-footer">
+    <button type="button" class="close">Schließen</button>
+  </div>
+</dialog>
 
 <script>
   const UNTAGGED = 'Andere';
@@ -532,6 +629,16 @@
     document.getElementById('show-sidebar').onclick = () => {
       document.body.classList.remove('sidebar-hidden');
     };
+    const helpDialog = document.getElementById('help-dialog');
+    document.getElementById('show-help').onclick = () => {
+      if (typeof helpDialog.showModal === 'function') helpDialog.showModal();
+      else helpDialog.setAttribute('open', '');
+    };
+    helpDialog.querySelector('button.close').onclick = () => helpDialog.close();
+    helpDialog.addEventListener('click', (e) => {
+      // close when clicking the backdrop (outside the dialog box)
+      if (e.target === helpDialog) helpDialog.close();
+    });
   }
 
   window.addEventListener('hashchange', () => {
