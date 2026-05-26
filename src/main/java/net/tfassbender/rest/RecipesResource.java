@@ -4,7 +4,6 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import net.tfassbender.markdown.RecipesMarkdownFormatter;
 import net.tfassbender.service.RecipeSummary;
 import net.tfassbender.service.RecipesService;
 
@@ -35,9 +34,8 @@ public class RecipesResource {
     @Path("/{filename}")
     public Response getRecipe(@PathParam("filename") String filename) {
         try {
-            String content = service.readRecipeFile(filename);
-            String formatted = new RecipesMarkdownFormatter().toHtml(content);
-            return Response.ok(formatted).type(MediaType.TEXT_PLAIN).build();
+            String html = service.getRecipeHtml(filename);
+            return Response.ok(html).type(MediaType.TEXT_PLAIN).build();
         } catch (IOException e) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity("Recipe not found: " + e.getMessage())

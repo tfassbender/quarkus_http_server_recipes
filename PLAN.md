@@ -2,7 +2,7 @@
 
 Ordered roughly by dependency / value. Each item is small enough to ship on its own.
 
-## 1. Tags (first, drives later UI work)
+## 1. Tags (first, drives later UI work) — DONE
 
 - **File format:** first line of each `.txt` is an HTML comment so markdown ignores it if anything slips through:
   `<!--tags: #tag1 #tag2-->`
@@ -11,11 +11,11 @@ Ordered roughly by dependency / value. Each item is small enough to ship on its 
 - **REST:** `/recipes` returns the new structure. `/recipes/{filename}` unchanged in shape.
 - **UI:** group sidebar list by tag (collapsible sections). Untagged recipes go under "Other".
 
-## 2. Filename path sanitization (bundle with #1)
+## 2. Filename path sanitization (bundle with #1) — DONE
 
 - In `RecipesService.readRecipeFile`, reject `filename` containing `/`, `\`, or `..`, or resolve and verify the path stays under `recipes.path`. Cheap, prevents traversal.
 
-## 3. Server-side caching of rendered HTML
+## 3. Server-side caching of rendered HTML — DONE
 
 - Single shared `RecipesMarkdownFormatter` (move to `@ApplicationScoped` or static), reuse parser/renderer.
 - Cache rendered HTML keyed by filename; invalidate when `Files.getLastModifiedTime` changes. `ConcurrentHashMap<String, CacheEntry(mtime, html)>` is enough — no eviction needed for this scale.

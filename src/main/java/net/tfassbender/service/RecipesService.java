@@ -1,6 +1,8 @@
 package net.tfassbender.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import net.tfassbender.markdown.RecipesMarkdownFormatter;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.BufferedReader;
@@ -8,9 +10,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -23,6 +27,13 @@ public class RecipesService {
 
     @ConfigProperty(name = "recipes.path")
     private String recipesPath;
+
+    @Inject
+    RecipesMarkdownFormatter formatter;
+
+    private final ConcurrentHashMap<String, CacheEntry> htmlCache = new ConcurrentHashMap<>();
+
+    private record CacheEntry(FileTime mtime, String html) {}
 
     public List<RecipeSummary> listRecipeFiles() throws IOException {
         Path path = Paths.get(recipesPath);
@@ -42,15 +53,23 @@ public class RecipesService {
         }
     }
 
-    public String readRecipeFile(String filename) throws IOException {
+    public String getRecipeHtml(String filename) throws IOException {
         Path path = resolveSafely(filename);
 
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
             throw new IOException("File not found: " + path.toAbsolutePath());
         }
 
+        FileTime mtime = Files.getLastModifiedTime(path);
+        CacheEntry cached = htmlCache.get(filename);
+        if (cached != null && cached.mtime().equals(mtime)) {
+            return cached.html();
+        }
+
         String content = Files.readString(path);
-        return stripTagLine(content);
+        String html = formatter.toHtml(stripTagLine(content));
+        htmlCache.put(filename, new CacheEntry(mtime, html));
+        return html;
     }
 
     private Path resolveSafely(String filename) throws IOException {
