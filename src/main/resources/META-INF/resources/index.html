@@ -408,21 +408,22 @@
     list.querySelectorAll('details.tag-group').forEach(d => {
       if (d.open && d.dataset.label) openGroups.add(d.dataset.label);
     });
+    const searching = (document.getElementById('search').value || '').trim().length > 0;
     list.innerHTML = '';
     const favs = recipes.filter(r => favorites.has(r.name));
     if (favs.length > 0) {
-      list.appendChild(renderGroup(FAVORITES, favs, openGroups));
+      list.appendChild(renderGroup(FAVORITES, favs, openGroups, searching));
     }
     groupByTag(recipes).forEach(([tag, items]) => {
-      list.appendChild(renderGroup(tag, items, openGroups));
+      list.appendChild(renderGroup(tag, items, openGroups, searching));
     });
   }
 
-  function renderGroup(label, items, openGroups) {
+  function renderGroup(label, items, openGroups, forceOpen) {
     const group = document.createElement('details');
     group.className = 'tag-group';
     group.dataset.label = label;
-    if (openGroups && openGroups.has(label)) group.open = true;
+    if (forceOpen || (openGroups && openGroups.has(label))) group.open = true;
     const summary = document.createElement('summary');
     summary.textContent = `${label} (${items.length})`;
     group.appendChild(summary);
@@ -492,18 +493,28 @@
     });
   }
 
+  function debounce(fn, delay) {
+    let timer = null;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
   function setupSearch() {
     const searchInput = document.getElementById('search');
     const wrapper = document.getElementById('search-wrapper');
     const clearBtn = document.getElementById('clear-search');
-    const update = () => {
+    const render = () => renderRecipeList(filterRecipes(searchInput.value));
+    const debouncedRender = debounce(render, 100);
+    searchInput.addEventListener('input', () => {
       wrapper.classList.toggle('has-value', searchInput.value.length > 0);
-      renderRecipeList(filterRecipes(searchInput.value));
-    };
-    searchInput.addEventListener('input', update);
+      debouncedRender();
+    });
     clearBtn.addEventListener('click', () => {
       searchInput.value = '';
-      update();
+      wrapper.classList.remove('has-value');
+      render();
       searchInput.focus();
     });
   }

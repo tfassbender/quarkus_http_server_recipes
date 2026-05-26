@@ -31,7 +31,7 @@ Ordered roughly by dependency / value. Each item is small enough to ship on its 
 - Render a "Favorites" section at the top of the sidebar.
 - **Explicitly client-only** — server never sees this.
 
-## 6. Search improvement
+## 6. Search improvement — DONE
 
 - Replace per-character substring filter with: split query on whitespace, each token must match either the name (substring, case-insensitive) or a tag (exact, with or without leading `#`).
 - Keep the input responsive but debounce to ~100ms once tag-grouping is in place.
