@@ -41,10 +41,9 @@ Ordered roughly by dependency / value. Each item is small enough to ship on its 
 - Small `?` button in the sidebar header opens a modal explaining the recipe file format: where to put the tag line, the exact `<!--tags: #tag1 #tag2-->` syntax, and which markdown features are supported (tables in particular).
 - Pure static content in `index.html`; no backend.
 
-## 8. Mobile + print CSS (do together)
+## 8. Mobile CSS — DONE
 
-- Mobile: collapse sidebar into a hamburger/drawer below ~640px so content gets full width.
-- Print: `@media print` hides sidebar, switches to light background, enlarges body font, `page-break-inside: avoid` on ingredient tables.
+- Mobile: collapse sidebar into a hamburger/drawer below ~768px so content gets full width.
 
 ## Out of scope (for now)
 

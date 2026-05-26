@@ -320,19 +320,40 @@
     }
 
     @media (max-width: 768px) {
-      body {
-        flex-direction: column;
+      #sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 85%;
+        max-width: 320px;
+        height: 100%;
+        z-index: 20;
+        border-right: 1px solid var(--border-color);
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.4);
+        transform: translateX(0);
+        transition: transform 0.2s ease-out;
       }
 
-      #sidebar {
-        width: 100%;
-        min-width: 0;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
+      /* Override desktop's display:none so we can animate the drawer */
+      body.sidebar-hidden #sidebar {
+        display: flex;
+        flex-direction: column;
+        transform: translateX(-100%);
       }
 
       #content {
         padding: 1em;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* Dim the page behind the open drawer */
+      body:not(.sidebar-hidden)::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 15;
       }
 
       a {
@@ -469,12 +490,19 @@
     }
   }
 
+  function isMobile() {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
   function selectRecipe(name, updateHash) {
     currentRecipe = name;
     loadRecipe(name);
     document.querySelectorAll('#recipe-list a').forEach(a => {
       a.classList.toggle('active', a.textContent === name);
     });
+    if (isMobile()) {
+      document.body.classList.add('sidebar-hidden');
+    }
     if (updateHash) {
       const target = HASH_PREFIX + encodeURIComponent(name);
       if (window.location.hash !== target) {
@@ -629,6 +657,16 @@
     document.getElementById('show-sidebar').onclick = () => {
       document.body.classList.remove('sidebar-hidden');
     };
+    // Tap on backdrop (left side, outside the drawer) closes the sidebar on mobile
+    document.addEventListener('click', (e) => {
+      if (!isMobile()) return;
+      if (document.body.classList.contains('sidebar-hidden')) return;
+      const sidebar = document.getElementById('sidebar');
+      const showBtn = document.getElementById('show-sidebar');
+      if (!sidebar.contains(e.target) && e.target !== showBtn && !showBtn.contains(e.target)) {
+        document.body.classList.add('sidebar-hidden');
+      }
+    });
     const helpDialog = document.getElementById('help-dialog');
     document.getElementById('show-help').onclick = () => {
       if (typeof helpDialog.showModal === 'function') helpDialog.showModal();
@@ -640,6 +678,9 @@
       if (e.target === helpDialog) helpDialog.close();
     });
   }
+
+  // Start with sidebar collapsed on mobile so content fills the screen
+  if (isMobile()) document.body.classList.add('sidebar-hidden');
 
   window.addEventListener('hashchange', () => {
     const name = recipeFromHash();
