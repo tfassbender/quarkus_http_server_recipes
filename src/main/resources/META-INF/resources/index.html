@@ -48,6 +48,59 @@
       color: var(--text-main);
     }
 
+    #sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5em;
+      margin-bottom: 0.5em;
+    }
+
+    #sidebar-header h1 {
+      margin: 0;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 0.25em;
+    }
+
+    .icon-button {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      border-radius: 4px;
+      width: 2em;
+      height: 2em;
+      cursor: pointer;
+      font-size: 1em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .icon-button:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+    }
+
+    #show-sidebar {
+      position: fixed;
+      top: 0.8em;
+      left: 0.8em;
+      z-index: 10;
+      display: none;
+    }
+
+    body.sidebar-hidden #sidebar {
+      display: none;
+    }
+
+    body.sidebar-hidden #show-sidebar {
+      display: inline-flex;
+    }
+
     ul {
       list-style: none;
       padding: 0;
@@ -113,16 +166,66 @@
       }
     }
 
-    #search {
+    #search-wrapper {
+      position: relative;
       margin-bottom: 1em;
+    }
+
+    #search {
       width: 100%;
-      padding: 0.6em;
+      padding: 0.6em 2.2em 0.6em 0.6em;
       font-size: 1em;
       box-sizing: border-box;
       border: 1px solid var(--border-color);
       border-radius: 4px;
       background-color: #1a1a1a;
       color: var(--text-main);
+    }
+
+    #clear-search {
+      position: absolute;
+      top: 50%;
+      right: 0.4em;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1em;
+      padding: 0.2em 0.4em;
+      display: none;
+    }
+
+    #clear-search:hover {
+      color: var(--text-main);
+    }
+
+    #search-wrapper.has-value #clear-search {
+      display: inline-block;
+    }
+
+    .tag-group {
+      margin-bottom: 0.5em;
+    }
+
+    .tag-group > summary {
+      cursor: pointer;
+      padding: 0.6em 0.8em;
+      font-weight: bold;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.85em;
+      letter-spacing: 0.05em;
+      border-radius: 4px;
+    }
+
+    .tag-group > summary:hover {
+      color: var(--text-main);
+    }
+
+    .tag-group ul {
+      margin-left: 0.5em;
+      padding-left: 1em;
     }
 
     @media (max-width: 768px) {
@@ -158,10 +261,22 @@
 </head>
 <body>
 
+<button id="show-sidebar" class="icon-button" title="Seitenleiste anzeigen" aria-label="Seitenleiste anzeigen">&#9776;</button>
+
 <div id="sidebar">
-  <h1>Rezepte</h1>
-  <input type="text" id="search" placeholder="Rezepte suchen..." />
-  <ul id="recipe-list">Loading...</ul>
+  <div id="sidebar-header">
+    <h1>Rezepte</h1>
+    <div class="header-buttons">
+      <button id="expand-all" class="icon-button" title="Alle ausklappen" aria-label="Alle ausklappen">&#43;</button>
+      <button id="collapse-all" class="icon-button" title="Alle einklappen" aria-label="Alle einklappen">&#8722;</button>
+      <button id="hide-sidebar" class="icon-button" title="Seitenleiste ausblenden" aria-label="Seitenleiste ausblenden">&times;</button>
+    </div>
+  </div>
+  <div id="search-wrapper">
+    <input type="text" id="search" placeholder="Rezepte suchen..." />
+    <button id="clear-search" type="button" title="Suche leeren" aria-label="Suche leeren">&times;</button>
+  </div>
+  <div id="recipe-list">Loading...</div>
 </div>
 
 <div id="content">
@@ -169,6 +284,7 @@
 </div>
 
 <script>
+  const UNTAGGED = 'Andere';
   let allRecipes = [];
   let currentRecipe = null;
 
@@ -185,22 +301,53 @@
       });
   }
 
+  function groupByTag(recipes) {
+    const groups = new Map();
+    recipes.forEach(r => {
+      const tags = r.tags && r.tags.length ? r.tags : [UNTAGGED];
+      tags.forEach(tag => {
+        if (!groups.has(tag)) groups.set(tag, []);
+        groups.get(tag).push(r);
+      });
+    });
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === UNTAGGED) return 1;
+      if (b === UNTAGGED) return -1;
+      return a.localeCompare(b);
+    });
+  }
+
   function renderRecipeList(recipes) {
     const list = document.getElementById('recipe-list');
     list.innerHTML = '';
-    recipes.forEach(filename => {
-      const item = document.createElement('li');
-      const link = document.createElement('a');
-      link.textContent = filename;
-      link.classList.toggle('active', filename === currentRecipe);
-      link.onclick = () => {
-        currentRecipe = filename;
-        loadRecipe(filename);
-        renderRecipeList(allRecipes); // refresh active state
-      };
-      item.appendChild(link);
-      list.appendChild(item);
+    const grouped = groupByTag(recipes);
+    grouped.forEach(([tag, items]) => {
+      const group = document.createElement('details');
+      group.className = 'tag-group';
+      const summary = document.createElement('summary');
+      summary.textContent = `${tag} (${items.length})`;
+      group.appendChild(summary);
+      const ul = document.createElement('ul');
+      items.forEach(r => ul.appendChild(renderRecipeItem(r)));
+      group.appendChild(ul);
+      list.appendChild(group);
     });
+  }
+
+  function renderRecipeItem(recipe) {
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.textContent = recipe.name;
+    link.classList.toggle('active', recipe.name === currentRecipe);
+    link.onclick = () => {
+      currentRecipe = recipe.name;
+      loadRecipe(recipe.name);
+      document.querySelectorAll('#recipe-list a').forEach(a => {
+        a.classList.toggle('active', a.textContent === recipe.name);
+      });
+    };
+    item.appendChild(link);
+    return item;
   }
 
   function loadRecipe(filename) {
@@ -218,17 +365,57 @@
       });
   }
 
+  function filterRecipes(rawQuery) {
+    const query = (rawQuery || '').trim().toLowerCase();
+    if (!query) return allRecipes;
+    const tokens = query.split(/\s+/);
+    return allRecipes.filter(r => {
+      const haystackName = r.name.toLowerCase();
+      const tagsLower = (r.tags || []).map(t => t.toLowerCase());
+      return tokens.every(tok => {
+        if (tok.startsWith('#')) {
+          const t = tok.substring(1);
+          return tagsLower.some(tag => tag === t);
+        }
+        return haystackName.includes(tok) || tagsLower.some(tag => tag.includes(tok));
+      });
+    });
+  }
+
   function setupSearch() {
     const searchInput = document.getElementById('search');
-    searchInput.addEventListener('input', () => {
-      const query = searchInput.value.toLowerCase();
-      const filtered = allRecipes.filter(name => name.toLowerCase().includes(query));
-      renderRecipeList(filtered);
+    const wrapper = document.getElementById('search-wrapper');
+    const clearBtn = document.getElementById('clear-search');
+    const update = () => {
+      wrapper.classList.toggle('has-value', searchInput.value.length > 0);
+      renderRecipeList(filterRecipes(searchInput.value));
+    };
+    searchInput.addEventListener('input', update);
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      update();
+      searchInput.focus();
     });
+  }
+
+  function setupHeaderButtons() {
+    document.getElementById('expand-all').onclick = () => {
+      document.querySelectorAll('#recipe-list details').forEach(d => d.open = true);
+    };
+    document.getElementById('collapse-all').onclick = () => {
+      document.querySelectorAll('#recipe-list details').forEach(d => d.open = false);
+    };
+    document.getElementById('hide-sidebar').onclick = () => {
+      document.body.classList.add('sidebar-hidden');
+    };
+    document.getElementById('show-sidebar').onclick = () => {
+      document.body.classList.remove('sidebar-hidden');
+    };
   }
 
   loadRecipeList();
   setupSearch();
+  setupHeaderButtons();
 </script>
 
 </body>

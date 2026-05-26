@@ -5,6 +5,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import net.tfassbender.markdown.RecipesMarkdownFormatter;
+import net.tfassbender.service.RecipeSummary;
 import net.tfassbender.service.RecipesService;
 
 import java.io.IOException;
@@ -21,7 +22,7 @@ public class RecipesResource {
     @GET
     public Response listRecipes() {
         try {
-            List<String> files = service.listRecipeFiles();
+            List<RecipeSummary> files = service.listRecipeFiles();
             return Response.ok(files).build();
         } catch (IOException e) {
             return Response.serverError()
