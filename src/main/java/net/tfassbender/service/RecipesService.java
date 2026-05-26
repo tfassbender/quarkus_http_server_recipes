@@ -90,16 +90,33 @@ public class RecipesService {
     private RecipeSummary toSummary(Path file) {
         String name = file.getFileName().toString();
         name = name.substring(0, name.length() - EXTENSION.length());
-        List<String> tags = readTags(file);
-        return new RecipeSummary(name, tags);
+        Header header = readHeader(file);
+        return new RecipeSummary(name, header.title(), header.tags());
     }
 
-    private List<String> readTags(Path file) {
+    private record Header(String title, List<String> tags) {}
+
+    private Header readHeader(Path file) {
         try (BufferedReader reader = Files.newBufferedReader(file)) {
-            String firstLine = reader.readLine();
-            return parseTagLine(firstLine);
+            String line = reader.readLine();
+            if (line == null) return new Header(null, List.of());
+
+            List<String> tags = parseTagLine(line);
+            if (!tags.isEmpty()) {
+                line = reader.readLine();
+            }
+            String title = null;
+            while (line != null) {
+                String trimmed = line.trim();
+                if (trimmed.startsWith("# ")) {
+                    title = trimmed.substring(2).trim();
+                    break;
+                }
+                line = reader.readLine();
+            }
+            return new Header(title, tags);
         } catch (IOException e) {
-            return List.of();
+            return new Header(null, List.of());
         }
     }
 

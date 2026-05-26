@@ -498,7 +498,7 @@
     currentRecipe = name;
     loadRecipe(name);
     document.querySelectorAll('#recipe-list a').forEach(a => {
-      a.classList.toggle('active', a.textContent === name);
+      a.classList.toggle('active', a.dataset.name === name);
     });
     if (isMobile()) {
       document.body.classList.add('sidebar-hidden');
@@ -520,6 +520,7 @@
         groups.get(tag).push(r);
       });
     });
+    groups.forEach(items => items.sort((a, b) => displayName(a).localeCompare(displayName(b))));
     return [...groups.entries()].sort(([a], [b]) => {
       if (a === UNTAGGED) return 1;
       if (b === UNTAGGED) return -1;
@@ -558,12 +559,17 @@
     return group;
   }
 
+  function displayName(recipe) {
+    return (recipe.title && recipe.title.length > 0) ? recipe.title : recipe.name;
+  }
+
   function renderRecipeItem(recipe) {
     const item = document.createElement('li');
     const wrapper = document.createElement('div');
     wrapper.className = 'recipe-item';
     const link = document.createElement('a');
-    link.textContent = recipe.name;
+    link.textContent = displayName(recipe);
+    link.dataset.name = recipe.name;
     link.classList.toggle('active', recipe.name === currentRecipe);
     link.onclick = () => {
       selectRecipe(recipe.name, true);
@@ -607,13 +613,16 @@
     const tokens = query.split(/\s+/);
     return allRecipes.filter(r => {
       const haystackName = r.name.toLowerCase();
+      const haystackTitle = (r.title || '').toLowerCase();
       const tagsLower = (r.tags || []).map(t => t.toLowerCase());
       return tokens.every(tok => {
         if (tok.startsWith('#')) {
           const t = tok.substring(1);
           return tagsLower.some(tag => tag === t);
         }
-        return haystackName.includes(tok) || tagsLower.some(tag => tag.includes(tok));
+        return haystackName.includes(tok)
+            || haystackTitle.includes(tok)
+            || tagsLower.some(tag => tag.includes(tok));
       });
     });
   }
