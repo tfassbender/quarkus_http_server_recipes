@@ -86,6 +86,16 @@
       color: var(--text-main);
     }
 
+    .icon-button.active {
+      background-color: var(--bg-accent);
+      color: #ffffff;
+      border-color: var(--bg-accent);
+    }
+
+    .icon-button[hidden] {
+      display: none;
+    }
+
     #show-sidebar {
       position: fixed;
       top: 0.8em;
@@ -348,6 +358,16 @@
         box-sizing: border-box;
       }
 
+      /* Stack the header so the buttons sit above the "Rezepte" headline */
+      #sidebar-header {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+      }
+
+      .header-buttons {
+        align-self: flex-end;
+      }
+
       /* Dim the page behind the open drawer */
       body:not(.sidebar-hidden)::before {
         content: '';
@@ -382,6 +402,7 @@
     <div class="header-buttons">
       <button id="expand-all" class="icon-button" title="Alle ausklappen" aria-label="Alle ausklappen">&#43;</button>
       <button id="collapse-all" class="icon-button" title="Alle einklappen" aria-label="Alle einklappen">&#8722;</button>
+      <button id="toggle-wake-lock" class="icon-button" title="Bildschirm anlassen" aria-label="Bildschirm anlassen" aria-pressed="false">&#9728;</button>
       <button id="show-help" class="icon-button" title="Hilfe" aria-label="Hilfe">?</button>
       <button id="hide-sidebar" class="icon-button" title="Seitenleiste ausblenden" aria-label="Seitenleiste ausblenden">&times;</button>
     </div>
@@ -424,6 +445,7 @@
     <li>Suche: mehrere Begriffe (UND-Verknüpfung). <code>#tag</code> sucht exakt nach einem Tag.</li>
     <li>Favoriten werden lokal im Browser gespeichert (kein Server).</li>
     <li>Rezepte sind direkt verlinkbar &ndash; die URL enthält das aktuell ausgewählte Rezept.</li>
+    <li>Mit der Schaltfläche &#9728; bleibt der Bildschirm beim Kochen an und schaltet sich nicht automatisch ab (sofern vom Browser unterstützt).</li>
   </ul>
 
   <div class="dialog-footer">
@@ -689,6 +711,85 @@
     });
   }
 
+  const WAKE_LOCK_KEY = 'recipes:wakeLock';
+  let wakeLock = null;
+  let wakeLockEnabled = false;
+
+  function wakeLockSupported() {
+    return 'wakeLock' in navigator;
+  }
+
+  async function acquireWakeLock() {
+    if (!wakeLockSupported() || wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      // The browser releases the lock automatically when the tab is hidden;
+      // clear our reference so we can re-acquire it when the tab is visible again.
+      wakeLock.addEventListener('release', () => {
+        wakeLock = null;
+      });
+    } catch (e) {
+      console.error('Failed to acquire wake lock', e);
+    }
+  }
+
+  async function releaseWakeLock() {
+    if (!wakeLock) return;
+    try {
+      await wakeLock.release();
+    } catch (e) {
+      console.error('Failed to release wake lock', e);
+    }
+    wakeLock = null;
+  }
+
+  function updateWakeLockButton() {
+    const btn = document.getElementById('toggle-wake-lock');
+    btn.classList.toggle('active', wakeLockEnabled);
+    btn.setAttribute('aria-pressed', String(wakeLockEnabled));
+    btn.title = wakeLockEnabled
+        ? 'Bildschirm bleibt an (tippen zum Ausschalten)'
+        : 'Bildschirm anlassen';
+    btn.setAttribute('aria-label', btn.title);
+  }
+
+  async function setWakeLockEnabled(enabled) {
+    wakeLockEnabled = enabled;
+    try {
+      localStorage.setItem(WAKE_LOCK_KEY, enabled ? '1' : '0');
+    } catch (e) {
+      // ignore persistence errors
+    }
+    updateWakeLockButton();
+    if (enabled) await acquireWakeLock();
+    else await releaseWakeLock();
+  }
+
+  function setupWakeLock() {
+    const btn = document.getElementById('toggle-wake-lock');
+    if (!wakeLockSupported()) {
+      btn.hidden = true;
+      return;
+    }
+    let stored = '0';
+    try {
+      stored = localStorage.getItem(WAKE_LOCK_KEY) || '0';
+    } catch (e) {
+      // ignore
+    }
+    wakeLockEnabled = stored === '1';
+    updateWakeLockButton();
+    btn.onclick = () => setWakeLockEnabled(!wakeLockEnabled);
+    // Re-acquire the lock when returning to the tab, since the browser drops it
+    // whenever the page is hidden.
+    document.addEventListener('visibilitychange', () => {
+      if (wakeLockEnabled && document.visibilityState === 'visible') {
+        acquireWakeLock();
+      }
+    });
+    if (wakeLockEnabled) acquireWakeLock();
+  }
+
   // Start with sidebar collapsed on mobile so content fills the screen
   if (isMobile()) document.body.classList.add('sidebar-hidden');
 
@@ -700,6 +801,7 @@
   loadRecipeList();
   setupSearch();
   setupHeaderButtons();
+  setupWakeLock();
 </script>
 
 </body>
