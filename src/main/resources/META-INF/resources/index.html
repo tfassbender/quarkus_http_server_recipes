@@ -26,6 +26,7 @@
       color: var(--text-main);
     }
 
+    /* header and search stay at the top, the sync info at the bottom; only the recipe list scrolls */
     #sidebar {
       width: 20%;
       min-width: 200px;
@@ -34,6 +35,21 @@
       overflow-y: auto;
       border-right: 1px solid var(--border-color);
       box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #recipe-list {
+      flex: 1;
+      /* lets the list shrink below its content height so it scrolls instead of pushing the footer out */
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    /* the browser's default light scrollbar stands out in the dark theme */
+    #recipe-list,
+    #ingredient-results {
+      scrollbar-color: var(--border-color) transparent;
     }
 
     #content {
@@ -116,7 +132,13 @@
     #sync-info {
       font-size: 0.8em;
       color: var(--text-muted);
-      margin-bottom: 0.5em;
+      margin-top: 0.5em;
+      padding-top: 0.5em;
+      border-top: 1px solid var(--border-color);
+    }
+
+    #sync-info:empty {
+      display: none;
     }
 
     #sync-info.has-error {
@@ -529,12 +551,12 @@
       <button id="hide-sidebar" class="icon-button" title="Seitenleiste ausblenden" aria-label="Seitenleiste ausblenden">&#10006;&#65039;</button>
     </div>
   </div>
-  <div id="sync-info"></div>
   <div id="search-wrapper" class="search-wrapper">
     <input type="text" id="search" class="search-input" placeholder="Rezepte suchen..." />
     <button id="clear-search" class="clear-search" type="button" title="Suche leeren" aria-label="Suche leeren">&times;</button>
   </div>
   <div id="recipe-list">Loading...</div>
+  <div id="sync-info"></div>
 </div>
 
 <div id="content">
