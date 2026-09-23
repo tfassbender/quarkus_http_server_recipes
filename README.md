@@ -6,6 +6,7 @@ A small Quarkus HTTP server that serves a directory of Markdown recipes as a sin
 
 - **Tag-based grouping** — recipes declare tags in a first-line HTML comment; the sidebar groups them into collapsible sections.
 - **Search** — substring search across name, title and tags, plus exact tag lookup via `#tag`. Multiple terms are AND-combined; matching groups auto-expand.
+- **Ingredient search** — a dialog (🥕🔍) ranks recipes by how many of the entered ingredients appear in their `## Zutaten` section. Matching ignores German endings (`tomate` finds "Tomaten") and finds compound words ending with the term (`zwiebel` finds "Lauchzwiebeln", but `tomate` not "Tomatenmark"); `hack*` / `*öl` / `*kartoffel*` are explicit wildcards. `#tag` terms list recipes with all these tags first and the others separately. The matched ingredients can be shown as chips (👁); the query is kept in `localStorage`.
 - **Favorites** — star icon per recipe, stored in `localStorage` (never leaves the browser). Favorited recipes appear in a pinned group at the top.
 - **Deep links** — the currently selected recipe is reflected in the URL (`#/recipe/<name>`), so individual recipes can be bookmarked and shared.
 - **Mobile-friendly** — on narrow screens the sidebar turns into a slide-in drawer with a dim backdrop.

@@ -266,12 +266,12 @@
       }
     }
 
-    #search-wrapper {
+    .search-wrapper {
       position: relative;
       margin-bottom: 1em;
     }
 
-    #search {
+    .search-input {
       width: 100%;
       padding: 0.6em 2.2em 0.6em 0.6em;
       font-size: 1em;
@@ -282,7 +282,7 @@
       color: var(--text-main);
     }
 
-    #clear-search {
+    .clear-search {
       position: absolute;
       top: 50%;
       right: 0.4em;
@@ -296,12 +296,104 @@
       display: none;
     }
 
-    #clear-search:hover {
+    .clear-search:hover {
       color: var(--text-main);
     }
 
-    #search-wrapper.has-value #clear-search {
+    .search-wrapper.has-value .clear-search {
       display: inline-block;
+    }
+
+    .icon-button.wide {
+      width: auto;
+      padding: 0 0.3em;
+    }
+
+
+    .ingredient-toolbar {
+      display: flex;
+      gap: 0.5em;
+      align-items: center;
+    }
+
+    .ingredient-toolbar .search-wrapper {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .search-hint {
+      font-size: 0.85em;
+      color: var(--text-muted);
+    }
+
+    #ingredient-results {
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+
+    .result-section-title {
+      margin: 0.8em 0 0.4em;
+      padding-top: 0.8em;
+      border-top: 1px dashed var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.85em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .ingredient-result {
+      display: block;
+      width: 100%;
+      padding: 0.5em 0.8em;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 1em;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .ingredient-result:hover {
+      background-color: var(--bg-hover);
+    }
+
+    /* recipes without the searched tags are dimmed to set them apart from the main results */
+    .ingredient-result.missing-tags {
+      color: var(--text-muted);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1em;
+      font-weight: bold;
+    }
+
+    .result-score {
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .result-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3em;
+      margin-top: 0.4em;
+    }
+
+    #ingredient-dialog:not(.show-chips) .result-chips {
+      display: none;
+    }
+
+    .chip {
+      padding: 0.15em 0.6em;
+      border-radius: 999px;
+      background-color: var(--bg-accent);
+      color: #ffffff;
+      font-size: 0.8em;
+      font-weight: normal;
     }
 
     .tag-group {
@@ -421,6 +513,7 @@
 </head>
 <body>
 
+
 <button id="show-sidebar" class="icon-button" title="Seitenleiste anzeigen" aria-label="Seitenleiste anzeigen">&#9776;</button>
 
 <div id="sidebar">
@@ -429,6 +522,7 @@
     <div class="header-buttons">
       <button id="expand-all" class="icon-button" title="Alle ausklappen" aria-label="Alle ausklappen">&#43;</button>
       <button id="collapse-all" class="icon-button" title="Alle einklappen" aria-label="Alle einklappen">&#8722;</button>
+      <button id="show-ingredient-search" class="icon-button wide" title="Zutatensuche" aria-label="Zutatensuche">&#129365;&#128269;</button>
       <button id="sync-now" class="icon-button" title="Rezepte jetzt aktualisieren" aria-label="Rezepte jetzt aktualisieren" hidden>&#8635;</button>
       <button id="toggle-wake-lock" class="icon-button" title="Bildschirm anlassen" aria-label="Bildschirm anlassen" aria-pressed="false">&#9728;</button>
       <button id="show-help" class="icon-button" title="Hilfe" aria-label="Hilfe">?</button>
@@ -436,9 +530,9 @@
     </div>
   </div>
   <div id="sync-info"></div>
-  <div id="search-wrapper">
-    <input type="text" id="search" placeholder="Rezepte suchen..." />
-    <button id="clear-search" type="button" title="Suche leeren" aria-label="Suche leeren">&times;</button>
+  <div id="search-wrapper" class="search-wrapper">
+    <input type="text" id="search" class="search-input" placeholder="Rezepte suchen..." />
+    <button id="clear-search" class="clear-search" type="button" title="Suche leeren" aria-label="Suche leeren">&times;</button>
   </div>
   <div id="recipe-list">Loading...</div>
 </div>
@@ -473,12 +567,29 @@
   <h3>Suche &amp; Favoriten</h3>
   <ul>
     <li>Suche: mehrere Begriffe (UND-Verknüpfung). <code>#tag</code> sucht exakt nach einem Tag.</li>
+    <li>Zutatensuche (&#129365;&#128269;): findet Rezepte, deren Abschnitt <code>## Zutaten</code> die eingegebenen Wörter enthält (auch in Mehrzahl oder als Ende zusammengesetzter Wörter, <code>*</code> als Platzhalter am Wortanfang oder -ende), sortiert nach der Anzahl gefundener Zutaten. Mit &#128065; werden die gefundenen Zutaten angezeigt.</li>
     <li>Favoriten werden lokal im Browser gespeichert (kein Server).</li>
     <li>Rezepte sind direkt verlinkbar &ndash; die URL enthält das aktuell ausgewählte Rezept.</li>
     <li>Liegen die Rezepte in einem Git-Repository, werden sie automatisch alle paar Minuten aktualisiert. Mit der Schaltfläche &#8635; geht es sofort (höchstens einmal pro Minute für alle Nutzer).</li>
     <li>Mit der Schaltfläche &#9728; bleibt der Bildschirm beim Kochen an und schaltet sich nicht automatisch ab (sofern vom Browser unterstützt).</li>
   </ul>
 
+  <div class="dialog-footer">
+    <button type="button" class="close">Schließen</button>
+  </div>
+</dialog>
+
+<dialog id="ingredient-dialog" class="app-dialog">
+  <h2>Zutatensuche</h2>
+  <div class="ingredient-toolbar">
+    <div id="ingredient-search-wrapper" class="search-wrapper">
+      <input type="text" id="ingredient-search" class="search-input" placeholder="z.&nbsp;B. tomaten zwiebel #nudeln" autocomplete="off" />
+      <button id="clear-ingredient-search" class="clear-search" type="button" title="Suche leeren" aria-label="Suche leeren">&times;</button>
+    </div>
+    <button id="toggle-chips" class="icon-button" type="button" aria-pressed="false">&#128065;</button>
+  </div>
+  <p class="search-hint">Zutaten durch Leerzeichen trennen. Gesucht wird im Abschnitt &bdquo;Zutaten&ldquo;, auch nach Mehrzahl und zusammengesetzten Wörtern (<code>zwiebel</code> findet &bdquo;Lauchzwiebeln&ldquo;). <code>hack*</code> findet Wörter, die so beginnen, <code>*öl</code> Wörter, die so enden. Mit <code>#tag</code> werden Rezepte dieser Kategorie zuerst angezeigt.</p>
+  <div id="ingredient-results"></div>
   <div class="dialog-footer">
     <button type="button" class="close">Schließen</button>
   </div>
@@ -815,6 +926,150 @@
     }
   }
 
+  const INGREDIENT_SEARCH_KEY = 'recipes:ingredientSearch';
+  const INGREDIENT_CHIPS_KEY = 'recipes:ingredientChips';
+  let ingredientSearchRequest = 0;
+
+  function readStorage(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value === null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      // ignore persistence errors
+    }
+  }
+
+  function setupIngredientSearch() {
+    const dialog = document.getElementById('ingredient-dialog');
+    const input = document.getElementById('ingredient-search');
+    const wrapper = document.getElementById('ingredient-search-wrapper');
+    const search = () => {
+      writeStorage(INGREDIENT_SEARCH_KEY, input.value);
+      runIngredientSearch(input.value);
+    };
+    const debouncedSearch = debounce(search, 200);
+    // the query survives closing the dialog and reloading the page, so an accidental click loses nothing
+    input.value = readStorage(INGREDIENT_SEARCH_KEY, '');
+    wrapper.classList.toggle('has-value', input.value.length > 0);
+    input.addEventListener('input', () => {
+      wrapper.classList.toggle('has-value', input.value.length > 0);
+      debouncedSearch();
+    });
+    document.getElementById('clear-ingredient-search').onclick = () => {
+      input.value = '';
+      wrapper.classList.remove('has-value');
+      search();
+      input.focus();
+    };
+    document.getElementById('toggle-chips').onclick = () => setChipsVisible(!dialog.classList.contains('show-chips'));
+    setChipsVisible(readStorage(INGREDIENT_CHIPS_KEY, '0') === '1');
+    document.getElementById('show-ingredient-search').onclick = () => {
+      openDialog(dialog);
+      // re-run on every open, since the recipes may have changed through a sync
+      search();
+    };
+  }
+
+  function setChipsVisible(visible) {
+    document.getElementById('ingredient-dialog').classList.toggle('show-chips', visible);
+    const button = document.getElementById('toggle-chips');
+    button.classList.toggle('active', visible);
+    button.setAttribute('aria-pressed', String(visible));
+    button.title = visible ? 'Gefundene Zutaten ausblenden' : 'Gefundene Zutaten anzeigen';
+    button.setAttribute('aria-label', button.title);
+    writeStorage(INGREDIENT_CHIPS_KEY, visible ? '1' : '0');
+  }
+
+  function runIngredientSearch(query) {
+    const requestId = ++ingredientSearchRequest;
+    const container = document.getElementById('ingredient-results');
+    if (!query.trim()) {
+      container.replaceChildren(searchHint('Gib eine oder mehrere Zutaten ein.'));
+      return;
+    }
+    fetch(`/recipes/search?q=${encodeURIComponent(query)}`)
+      .then(response => {
+        if (!response.ok) throw new Error(`Search failed (${response.status})`);
+        return response.json();
+      })
+      .then(result => {
+        // responses of outdated queries can arrive late while typing; only the latest one is shown
+        if (requestId === ingredientSearchRequest) renderIngredientResults(result);
+      })
+      .catch(error => {
+        if (requestId === ingredientSearchRequest) container.replaceChildren(searchHint('Die Suche ist fehlgeschlagen.'));
+        console.error(error);
+      });
+  }
+
+  function renderIngredientResults(result) {
+    const container = document.getElementById('ingredient-results');
+    container.replaceChildren();
+    if (result.results.length === 0 && result.resultsMissingTags.length === 0) {
+      container.appendChild(searchHint('Keine passenden Rezepte gefunden.'));
+      return;
+    }
+    const tagList = result.tags.map(tag => '#' + tag).join(' ');
+    if (result.results.length === 0) {
+      container.appendChild(searchHint(`Keine passenden Rezepte mit ${tagList}.`));
+    }
+    result.results.forEach(r => container.appendChild(renderIngredientResult(r, result.ingredientCount, false)));
+    if (result.resultsMissingTags.length > 0) {
+      const title = document.createElement('div');
+      title.className = 'result-section-title';
+      title.textContent = result.tags.length === 1 ? `Ohne ${tagList}` : `Ohne alle Tags (${tagList})`;
+      container.appendChild(title);
+      result.resultsMissingTags.forEach(r => container.appendChild(renderIngredientResult(r, result.ingredientCount, true)));
+    }
+  }
+
+  function renderIngredientResult(recipe, ingredientCount, missingTags) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = missingTags ? 'ingredient-result missing-tags' : 'ingredient-result';
+    const header = document.createElement('div');
+    header.className = 'result-header';
+    const name = document.createElement('span');
+    name.textContent = displayName(recipe);
+    const score = document.createElement('span');
+    score.className = 'result-score';
+    // with only tags searched there is no ingredient score to show
+    score.textContent = ingredientCount > 0 ? `${recipe.score} / ${ingredientCount}` : '';
+    header.append(name, score);
+    button.appendChild(header);
+    if (recipe.matchedIngredients.length > 0) {
+      const chips = document.createElement('div');
+      chips.className = 'result-chips';
+      recipe.matchedIngredients.forEach(ingredient => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = ingredient;
+        chips.appendChild(chip);
+      });
+      button.appendChild(chips);
+    }
+    button.onclick = () => {
+      document.getElementById('ingredient-dialog').close();
+      selectRecipe(recipe.name, true);
+    };
+    return button;
+  }
+
+  function searchHint(text) {
+    const hint = document.createElement('p');
+    hint.className = 'search-hint';
+    hint.textContent = text;
+    return hint;
+  }
+
   function setupSyncStatus() {
     loadSyncStatus();
     // keeps the relative time current and picks up the server's periodic syncs
@@ -913,6 +1168,7 @@
   setupHeaderButtons();
   setupWakeLock();
   setupSyncStatus();
+  setupIngredientSearch();
 </script>
 
 </body>
