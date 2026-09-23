@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("io.quarkus") version "3.8.1"
+    id("io.quarkus") version "3.39.4"
 }
 
 repositories {
@@ -8,14 +8,13 @@ repositories {
 }
 
 dependencies {
-    implementation(enforcedPlatform("io.quarkus:quarkus-bom:3.8.1"))
-    implementation("io.quarkus:quarkus-resteasy-reactive")
-    implementation("io.quarkus:quarkus-resteasy-reactive-jackson")
-	implementation("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
-    implementation("com.vladsch.flexmark:flexmark-all:0.64.0") // markdown to html transformation
+    implementation(enforcedPlatform("io.quarkus:quarkus-bom:3.39.4"))
+    implementation("io.quarkus:quarkus-rest")
+    implementation("io.quarkus:quarkus-rest-jackson")
+    implementation("com.vladsch.flexmark:flexmark-all:0.64.8") // markdown to html transformation
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
