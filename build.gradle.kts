@@ -11,7 +11,9 @@ dependencies {
     implementation(enforcedPlatform("io.quarkus:quarkus-bom:3.39.4"))
     implementation("io.quarkus:quarkus-rest")
     implementation("io.quarkus:quarkus-rest-jackson")
+    implementation("io.quarkus:quarkus-scheduler")
     implementation("com.vladsch.flexmark:flexmark-all:0.64.8") // markdown to html transformation
+    implementation("org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r")
 }
 
 java {

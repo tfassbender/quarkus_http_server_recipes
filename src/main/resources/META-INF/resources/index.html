@@ -96,6 +96,30 @@
       display: none;
     }
 
+    .icon-button:disabled {
+      cursor: wait;
+    }
+
+    .icon-button.spinning {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #sync-info {
+      font-size: 0.8em;
+      color: var(--text-muted);
+      margin-bottom: 0.5em;
+    }
+
+    #sync-info.has-error {
+      color: #e57373;
+    }
+
     #show-sidebar {
       position: fixed;
       top: 0.8em;
@@ -112,7 +136,7 @@
       display: inline-flex;
     }
 
-    #help-dialog {
+    .app-dialog {
       background-color: var(--bg-sidebar);
       color: var(--text-main);
       border: 1px solid var(--border-color);
@@ -123,15 +147,15 @@
       box-sizing: border-box;
     }
 
-    #help-dialog::backdrop {
+    .app-dialog::backdrop {
       background: rgba(0, 0, 0, 0.6);
     }
 
-    #help-dialog h2 {
+    .app-dialog h2 {
       margin-top: 0;
     }
 
-    #help-dialog h3 {
+    .app-dialog h3 {
       margin-top: 1.2em;
       margin-bottom: 0.4em;
       font-size: 1em;
@@ -140,8 +164,8 @@
       letter-spacing: 0.05em;
     }
 
-    #help-dialog code,
-    #help-dialog pre {
+    .app-dialog code,
+    .app-dialog pre {
       background-color: #1a1a1a;
       border: 1px solid var(--border-color);
       border-radius: 3px;
@@ -149,18 +173,18 @@
       font-family: monospace;
     }
 
-    #help-dialog pre {
+    .app-dialog pre {
       padding: 0.6em 0.8em;
       overflow-x: auto;
       white-space: pre;
     }
 
-    #help-dialog .dialog-footer {
+    .app-dialog .dialog-footer {
       margin-top: 1.2em;
       text-align: right;
     }
 
-    #help-dialog button.close {
+    .app-dialog button.close {
       background-color: var(--bg-accent);
       color: #fff;
       border: none;
@@ -170,7 +194,7 @@
       font-size: 1em;
     }
 
-    #help-dialog button.close:hover {
+    .app-dialog button.close:hover {
       filter: brightness(1.15);
     }
 
@@ -402,11 +426,13 @@
     <div class="header-buttons">
       <button id="expand-all" class="icon-button" title="Alle ausklappen" aria-label="Alle ausklappen">&#43;</button>
       <button id="collapse-all" class="icon-button" title="Alle einklappen" aria-label="Alle einklappen">&#8722;</button>
+      <button id="sync-now" class="icon-button" title="Rezepte jetzt aktualisieren" aria-label="Rezepte jetzt aktualisieren" hidden>&#8635;</button>
       <button id="toggle-wake-lock" class="icon-button" title="Bildschirm anlassen" aria-label="Bildschirm anlassen" aria-pressed="false">&#9728;</button>
       <button id="show-help" class="icon-button" title="Hilfe" aria-label="Hilfe">?</button>
       <button id="hide-sidebar" class="icon-button" title="Seitenleiste ausblenden" aria-label="Seitenleiste ausblenden">&times;</button>
     </div>
   </div>
+  <div id="sync-info"></div>
   <div id="search-wrapper">
     <input type="text" id="search" placeholder="Rezepte suchen..." />
     <button id="clear-search" type="button" title="Suche leeren" aria-label="Suche leeren">&times;</button>
@@ -418,7 +444,7 @@
   <div id="recipe-content">Wähle ein Rezept aus der Liste aus um es anzuzeigen.</div>
 </div>
 
-<dialog id="help-dialog">
+<dialog id="help-dialog" class="app-dialog">
   <h2>Hilfe &ndash; Rezeptdateien</h2>
 
   <p>Rezepte werden als einfache <code>.txt</code>-Dateien im konfigurierten Rezepteverzeichnis abgelegt. Der Dateiname (ohne <code>.txt</code>) wird als Rezeptname angezeigt.</p>
@@ -446,11 +472,20 @@
     <li>Suche: mehrere Begriffe (UND-Verknüpfung). <code>#tag</code> sucht exakt nach einem Tag.</li>
     <li>Favoriten werden lokal im Browser gespeichert (kein Server).</li>
     <li>Rezepte sind direkt verlinkbar &ndash; die URL enthält das aktuell ausgewählte Rezept.</li>
+    <li>Liegen die Rezepte in einem Git-Repository, werden sie automatisch alle paar Minuten aktualisiert. Mit der Schaltfläche &#8635; geht es sofort (höchstens einmal pro Minute für alle Nutzer).</li>
     <li>Mit der Schaltfläche &#9728; bleibt der Bildschirm beim Kochen an und schaltet sich nicht automatisch ab (sofern vom Browser unterstützt).</li>
   </ul>
 
   <div class="dialog-footer">
     <button type="button" class="close">Schließen</button>
+  </div>
+</dialog>
+
+<dialog id="message-dialog" class="app-dialog">
+  <h2 class="message-title"></h2>
+  <p class="message-text"></p>
+  <div class="dialog-footer">
+    <button type="button" class="close">OK</button>
   </div>
 </dialog>
 
@@ -701,15 +736,86 @@
       }
     });
     const helpDialog = document.getElementById('help-dialog');
-    document.getElementById('show-help').onclick = () => {
-      if (typeof helpDialog.showModal === 'function') helpDialog.showModal();
-      else helpDialog.setAttribute('open', '');
-    };
-    helpDialog.querySelector('button.close').onclick = () => helpDialog.close();
-    helpDialog.addEventListener('click', (e) => {
-      // close when clicking the backdrop (outside the dialog box)
-      if (e.target === helpDialog) helpDialog.close();
+    document.getElementById('show-help').onclick = () => openDialog(helpDialog);
+    document.querySelectorAll('.app-dialog').forEach(dialog => {
+      dialog.querySelector('button.close').onclick = () => dialog.close();
+      dialog.addEventListener('click', (e) => {
+        // close when clicking the backdrop (outside the dialog box)
+        if (e.target === dialog) dialog.close();
+      });
     });
+    document.getElementById('sync-now').onclick = syncNow;
+  }
+
+  function openDialog(dialog) {
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  }
+
+  function showMessage(title, text) {
+    const dialog = document.getElementById('message-dialog');
+    dialog.querySelector('.message-title').textContent = title;
+    dialog.querySelector('.message-text').textContent = text;
+    openDialog(dialog);
+  }
+
+  const SYNC_STATUS_REFRESH_MS = 60 * 1000;
+
+  function loadSyncStatus() {
+    fetch('/sync')
+      .then(response => response.json())
+      .then(renderSyncStatus)
+      .catch(error => console.error('Failed to load sync status', error));
+  }
+
+  function renderSyncStatus(status) {
+    document.getElementById('sync-now').hidden = !status.gitEnabled;
+    const info = document.getElementById('sync-info');
+    const lastSuccess = status.lastSuccess
+        ? `Zuletzt aktualisiert: ${formatRelativeTime(new Date(status.lastSuccess))}`
+        : 'Noch nicht aktualisiert';
+    info.textContent = status.lastError ? `${lastSuccess} (letzter Versuch fehlgeschlagen)` : lastSuccess;
+    info.title = status.lastError || '';
+    info.classList.toggle('has-error', Boolean(status.lastError));
+  }
+
+  function formatRelativeTime(date) {
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (minutes < 1) return 'gerade eben';
+    if (minutes < 60) return `vor ${minutes} Min.`;
+    if (minutes < 24 * 60) return `vor ${Math.floor(minutes / 60)} Std.`;
+    return date.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  async function syncNow() {
+    const button = document.getElementById('sync-now');
+    button.disabled = true;
+    button.classList.add('spinning');
+    try {
+      const response = await fetch('/sync', { method: 'POST' });
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        showMessage('Bitte kurz warten',
+            `Die Rezepte wurden gerade erst aktualisiert. Versuche es in ${body.retryAfterSeconds} Sekunden erneut.`);
+      } else if (!response.ok) {
+        showMessage('Aktualisierung fehlgeschlagen', body.message || `Serverfehler (${response.status})`);
+        loadSyncStatus();
+      } else {
+        renderSyncStatus(body);
+        loadRecipeList();
+      }
+    } catch (error) {
+      showMessage('Aktualisierung fehlgeschlagen', 'Der Server ist nicht erreichbar.');
+    } finally {
+      button.disabled = false;
+      button.classList.remove('spinning');
+    }
+  }
+
+  function setupSyncStatus() {
+    loadSyncStatus();
+    // keeps the relative time current and picks up the server's periodic syncs
+    setInterval(loadSyncStatus, SYNC_STATUS_REFRESH_MS);
   }
 
   const WAKE_LOCK_KEY = 'recipes:wakeLock';
@@ -803,6 +909,7 @@
   setupSearch();
   setupHeaderButtons();
   setupWakeLock();
+  setupSyncStatus();
 </script>
 
 </body>
