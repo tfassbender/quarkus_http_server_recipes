@@ -9,9 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 @ApplicationScoped
@@ -39,6 +37,10 @@ public class RecipesService {
         return index.html(name).orElseThrow(() -> new RecipeNotFoundException(name));
     }
 
+    public IngredientSearchResponse searchByIngredients(String query) {
+        return IngredientSearch.search(index.recipes(), IngredientSearch.Query.parse(query));
+    }
+
     /**
      * Re-reads all recipe files. On failure the previous index stays in place.
      */
@@ -56,15 +58,15 @@ public class RecipesService {
                     .toList();
         }
 
-        List<RecipeSummary> summaries = new ArrayList<>();
-        Map<String, String> htmlByName = new HashMap<>();
+        List<IndexedRecipe> recipes = new ArrayList<>();
         for (Path file : files) {
             String name = stripExtension(file.getFileName().toString());
             RecipeParser.ParsedRecipe parsed = RecipeParser.parse(Files.readString(file));
-            summaries.add(new RecipeSummary(name, parsed.title(), parsed.tags()));
-            htmlByName.put(name, formatter.toHtml(parsed.markdown()));
+            RecipeSummary summary = new RecipeSummary(name, parsed.title(), parsed.tags());
+            recipes.add(new IndexedRecipe(summary, formatter.toHtml(parsed.markdown()),
+                    IngredientSearch.ingredientWords(parsed.ingredients())));
         }
-        index = new RecipeIndex(List.copyOf(summaries), Map.copyOf(htmlByName));
+        index = RecipeIndex.of(recipes);
     }
 
     private static String stripExtension(String filename) {

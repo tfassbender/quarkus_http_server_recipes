@@ -6,13 +6,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Extracts the optional tag line and the title from a recipe file's content.
+ * Extracts the optional tag line, the title and the ingredient section from a recipe file's content.
  */
 final class RecipeParser {
 
     private static final Pattern TAG_LINE = Pattern.compile("^<!--\\s*tags:\\s*(.*?)\\s*-->\\s*$");
+    private static final Pattern INGREDIENTS_HEADING = Pattern.compile("^##\\s+Zutaten\\s*:?$", Pattern.CASE_INSENSITIVE);
+    // a level 1 or 2 heading ends the ingredient section; deeper headings (e.g. "### Hefeteig") belong to it
+    private static final Pattern SECTION_END = Pattern.compile("^#{1,2}\\s");
 
-    record ParsedRecipe(String title, List<String> tags, String markdown) {}
+    /**
+     * @param ingredients text of all "## Zutaten" sections, empty if the recipe has none
+     */
+    record ParsedRecipe(String title, List<String> tags, String markdown, String ingredients) {}
 
     private RecipeParser() {}
 
@@ -26,7 +32,23 @@ final class RecipeParser {
                 .map(line -> line.substring(2).trim())
                 .findFirst()
                 .orElse(null);
-        return new ParsedRecipe(title, tags, stripTagLine(content));
+        return new ParsedRecipe(title, tags, stripTagLine(content), extractIngredients(lines));
+    }
+
+    static String extractIngredients(List<String> lines) {
+        StringBuilder ingredients = new StringBuilder();
+        boolean inSection = false;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (INGREDIENTS_HEADING.matcher(trimmed).matches()) {
+                inSection = true;
+            } else if (SECTION_END.matcher(trimmed).find()) {
+                inSection = false;
+            } else if (inSection) {
+                ingredients.append(line).append('\n');
+            }
+        }
+        return ingredients.toString();
     }
 
     static List<String> parseTagLine(String line) {

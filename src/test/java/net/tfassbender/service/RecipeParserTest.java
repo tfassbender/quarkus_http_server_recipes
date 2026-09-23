@@ -40,6 +40,29 @@ class RecipeParserTest {
     }
 
     @Test
+    void extractIngredients_readsOnlyZutatenSections() {
+        String content = """
+                # Pizza
+                Ei im Intro
+                ## Zutaten
+                | 150g | Mehl |
+                ### Belag
+                Käse
+                ## Zubereitung
+                Ei aufschlagen
+                ## zutaten:
+                Salz
+                """;
+
+        assertEquals("| 150g | Mehl |\n### Belag\nKäse\nSalz\n", RecipeParser.extractIngredients(content.lines().toList()));
+    }
+
+    @Test
+    void extractIngredients_withoutSection_isEmpty() {
+        assertEquals("", RecipeParser.parse("# Spare Ribs\n## Zubereitung\n500g Spare Ribs\n").ingredients());
+    }
+
+    @Test
     void parse_withoutTitle() {
         RecipeParser.ParsedRecipe parsed = RecipeParser.parse("just text\n## Sub heading\n");
 

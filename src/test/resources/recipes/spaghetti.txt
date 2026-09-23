@@ -1,8 +1,15 @@
 <!-- tags: #nudeln #vegetarisch -->
 # Spaghetti Aglio e Olio
 
+## Zutaten
+
 | 500 g | Spaghetti |
 |---|---|
 | 6 | Knoblauchzehen |
+| 1 | Ei |
+
+## Zubereitung
+
+Knoblauch anbraten. Tomaten braucht man nicht.
 
 <script>alert(1)</script>

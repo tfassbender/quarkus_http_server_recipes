@@ -4,7 +4,9 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import net.tfassbender.service.IngredientSearchResponse;
 import net.tfassbender.service.RecipeSummary;
 import net.tfassbender.service.RecipesService;
 
@@ -23,6 +25,16 @@ public class RecipesResource {
     @Produces(MediaType.APPLICATION_JSON)
     public List<RecipeSummary> listRecipes() {
         return service.listRecipes();
+    }
+
+    /**
+     * Ingredient search: space separated ingredients (whole words in the "## Zutaten" section) and #tags.
+     */
+    @GET
+    @Path("/search")
+    @Produces(MediaType.APPLICATION_JSON)
+    public IngredientSearchResponse searchByIngredients(@QueryParam("q") String query) {
+        return service.searchByIngredients(query);
     }
 
     /**
