@@ -437,6 +437,21 @@
       color: var(--text-main);
     }
 
+    /* the flat "all recipes" list is a fallback view, so it is separated and toned down instead of looking like a tag */
+    .tag-group.all-recipes {
+      margin-top: 1em;
+      padding-top: 0.5em;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .tag-group.all-recipes > summary {
+      font-weight: normal;
+      font-style: italic;
+      text-transform: none;
+      letter-spacing: normal;
+      opacity: 0.8;
+    }
+
     .tag-group ul {
       margin-left: 0.5em;
       padding-left: 1em;
@@ -628,6 +643,7 @@
 <script>
   const UNTAGGED = 'Andere';
   const FAVORITES = 'Favoriten';
+  const ALL_RECIPES = 'Alle Rezepte';
   const FAVORITES_KEY = 'recipes:favorites';
   const HASH_PREFIX = '#/recipe/';
   let allRecipes = [];
@@ -738,6 +754,15 @@
     groupByTag(recipes).forEach(([tag, items]) => {
       list.appendChild(renderGroup(tag, items, openGroups, searching));
     });
+    list.appendChild(renderAllRecipesGroup(recipes, openGroups));
+  }
+
+  function renderAllRecipesGroup(recipes, openGroups) {
+    const sorted = [...recipes].sort((a, b) => displayName(a).localeCompare(displayName(b)));
+    // not force-opened while searching, otherwise every match would be listed twice
+    const group = renderGroup(ALL_RECIPES, sorted, openGroups, false);
+    group.classList.add('all-recipes');
+    return group;
   }
 
   function renderGroup(label, items, openGroups, forceOpen) {
