@@ -3,3 +3,4 @@
 .settings/
 .idea/
 build/
+.playwright-mcp/
