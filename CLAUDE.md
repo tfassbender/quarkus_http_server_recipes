@@ -25,11 +25,12 @@ Layers under `net.tfassbender`:
 
 - `rest/RecipesResource` — `/recipes` (list), `/recipes/search?q=` (ingredient search) and `/recipes/{name}` (rendered HTML, returned as `text/plain` because the frontend inserts it as a string).
 - `rest/SyncResource` — `GET /sync` (status: `gitEnabled`, `lastSuccess`, `lastError`), `POST /sync` (manual pull, globally rate limited → `429` with `Retry-After`).
+- `rest/ImagesResource` — `GET /images/{path}` serves recipe images via `service/ImageService`, which resolves the path inside `<recipes.path>/images` (real-path containment check, extension whitelist without SVG; anything else → 404).
 - `rest/ExceptionMappers` — maps domain exceptions to status codes (`RecipeNotFoundException` → 404, `PullCooldownException` → 429, `SyncFailedException` → 500).
 - `sync/SyncService` — syncs on startup, via `@Scheduled`, and on manual request; serialized by a lock. A sync = `GitRepositoryClient.update()` (clone-if-missing, else fetch + hard reset + clean) followed by `RecipesService.rebuildIndex()`. On failure the old index is kept and the error recorded in `SyncStatus`.
 - `sync/PullCooldown` — lock-free global cooldown (`AtomicReference<Instant>`, injectable `Clock` for tests).
 - `service/RecipesService` — holds an immutable `RecipeIndex` (one `IndexedRecipe` per file: summary, pre-rendered HTML, `## Zutaten` text) behind a `volatile` field, swapped atomically on rebuild. Lookups go by name through the index only, so there is no file-system access per request. Filenames are exposed without the `.txt` extension.
-- `service/RecipeParser` — tag line (`<!-- tags: #a #b -->` on line 1), title (first `# ` heading) and ingredient section (`## Zutaten` up to the next level 1/2 heading) extraction.
+- `service/RecipeParser` — metadata comment lines at the top of the file in any order (`<!-- tags: #a #b -->`, `<!-- image: path/relative/to/images.jpg | optional caption -->`, one image per line, parsed by `service/RecipeImage`), title (first `# ` heading) and ingredient section (`## Zutaten` up to the next level 1/2 heading) extraction.
 - `service/IngredientSearch` — scores recipes by distinct query ingredients found among the ingredient section's words; `#tag` terms split results into "has all tags" and "missing tags".
 - `service/IngredientTerm` — matching rules per term: light German stemming (strip one of -ern/-en/-er/-es/-e/-n/-s) on both sides, compound matching (word stem ends with term stem, only for stems of 3+ letters to avoid "ei" → "klein"), and `*` wildcards (`hack*` prefix, `*öl` suffix, `*x*` contains).
 - `markdown/RecipesMarkdownFormatter` — Flexmark with the Tables extension and `ESCAPE_HTML`, so raw HTML in recipes is rendered as text.

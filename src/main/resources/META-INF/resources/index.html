@@ -304,6 +304,106 @@
       color: #ffffff;
     }
 
+    /* a single row that scrolls sideways instead of wrapping, so the recipe text stays close to the title */
+    .recipe-images {
+      display: flex;
+      gap: 0.5em;
+      overflow-x: auto;
+      margin-bottom: 1em;
+      scrollbar-color: var(--border-color) transparent;
+      /* #recipe-content uses pre-wrap, which would turn the whitespace between the images into gaps */
+      white-space: normal;
+    }
+
+    /* min-content makes the figure as wide as its image, so a long caption wraps instead of widening it */
+    .recipe-images figure {
+      margin: 0;
+      flex: none;
+      width: min-content;
+    }
+
+    /* same height for all images; the width follows each image's aspect ratio */
+    .recipe-images img {
+      display: block;
+      height: 200px;
+      width: auto;
+      border-radius: 4px;
+      cursor: zoom-in;
+    }
+
+    .recipe-images figcaption {
+      margin-top: 0.3em;
+      font-size: 0.75em;
+      color: var(--text-muted);
+      /* lets a long caption wrap at the image's width even where it has no spaces */
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 768px) {
+      .recipe-images img {
+        height: 120px;
+      }
+    }
+
+    /* almost fullscreen; dvw/dvh follow the visible viewport, so the image refits when a phone is rotated */
+    #image-dialog {
+      width: 96vw;
+      height: 96vh;
+      width: 96dvw;
+      height: 96dvh;
+      max-width: none;
+      max-height: none;
+      padding: 0;
+      border: none;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    #image-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    /* image and caption stacked and centered, so the caption stays right below the image */
+    #image-dialog[open] {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* the image shrinks (keeping its aspect ratio) when it plus the caption would be taller than the dialog */
+    #image-dialog img {
+      flex: 0 1 auto;
+      min-height: 0;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      cursor: zoom-out;
+    }
+
+    #image-dialog figcaption {
+      align-self: center;
+      margin-top: 0.5em;
+      padding: 0.3em 0.8em;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      text-align: center;
+      color: #ffffff;
+    }
+
+    #image-dialog .close-image {
+      position: absolute;
+      top: 0.3em;
+      right: 0.3em;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 2em;
+      height: 2em;
+      font-size: 1.3em;
+      cursor: pointer;
+    }
+
     #recipe-content {
       background: #111;
       padding: 1em;
@@ -641,6 +741,14 @@
 ...</pre>
   <p>Mehrere Tags werden durch Leerzeichen getrennt. Rezepte ohne Tag-Zeile landen in der Gruppe <em>Andere</em>.</p>
 
+  <h3>Bilder (optional)</h3>
+  <p>Bilder liegen im Ordner <code>images</code> im Rezepteverzeichnis und werden wie die Tags über einen HTML-Kommentar am <strong>Dateianfang</strong> eingebunden (Pfad relativ zum Ordner <code>images</code>, eine Zeile pro Bild). Ein Text nach <code>|</code> wird als Bildunterschrift angezeigt. Sie werden nebeneinander unter dem Titel angezeigt; ein Klick auf ein Bild öffnet es im Vollbild.</p>
+  <pre>&lt;!--tags: #pasta #vegetarisch--&gt;
+&lt;!--image: spaghetti.jpg--&gt;
+&lt;!--image: pasta/spaghetti-teller.png | Mit frischer Petersilie--&gt;
+# Spaghetti Aglio e Olio</pre>
+  <p>Unterstützt werden JPG, PNG, GIF, WebP und AVIF.</p>
+
   <h3>Markdown-Inhalt</h3>
   <p>Der Rest der Datei ist normales Markdown. Unterstützt werden u.&nbsp;a.:</p>
   <ul>
@@ -700,6 +808,12 @@
   <div class="dialog-footer">
     <button type="button" class="close">Schließen</button>
   </div>
+</dialog>
+
+<dialog id="image-dialog">
+  <img alt="" />
+  <figcaption hidden></figcaption>
+  <button type="button" class="close-image" title="Schließen" aria-label="Schließen">&times;</button>
 </dialog>
 
 <dialog id="message-dialog" class="app-dialog">
@@ -889,12 +1003,58 @@
         return response.text();
       })
       .then(html => {
-        document.getElementById('recipe-content').innerHTML = html;
+        const content = document.getElementById('recipe-content');
+        content.innerHTML = html;
+        const recipe = allRecipes.find(r => r.name === filename);
+        if (recipe) insertRecipeImages(content, recipe.images || []);
       })
       .catch(error => {
         document.getElementById('recipe-content').textContent = 'Failed to load recipe.';
         console.error(error);
       });
+  }
+
+  // images go below the title, or to the top if the recipe has none
+  function insertRecipeImages(content, images) {
+    if (images.length === 0) return;
+    const container = document.createElement('div');
+    container.className = 'recipe-images';
+    images.forEach(image => container.appendChild(renderRecipeImage(image)));
+    const title = content.querySelector('h1');
+    if (title) title.after(container);
+    else content.prepend(container);
+  }
+
+  function renderRecipeImage(image) {
+    const figure = document.createElement('figure');
+    const img = document.createElement('img');
+    // encode each segment so subdirectories keep their slashes
+    img.src = '/images/' + image.path.split('/').map(encodeURIComponent).join('/');
+    img.alt = image.caption || '';
+    img.onerror = () => figure.remove();
+    img.onclick = () => showImage(img.src, image.caption);
+    figure.appendChild(img);
+    if (image.caption) {
+      const caption = document.createElement('figcaption');
+      caption.textContent = image.caption;
+      figure.appendChild(caption);
+    }
+    return figure;
+  }
+
+  function showImage(src, caption) {
+    const dialog = document.getElementById('image-dialog');
+    dialog.querySelector('img').src = src;
+    const captionElement = dialog.querySelector('figcaption');
+    captionElement.textContent = caption || '';
+    captionElement.hidden = !caption;
+    openDialog(dialog);
+  }
+
+  function setupImageDialog() {
+    const dialog = document.getElementById('image-dialog');
+    // a tap anywhere closes the viewer, which is easier on a phone than hitting the small close button
+    dialog.onclick = () => dialog.close();
   }
 
   function filterRecipes(rawQuery) {
@@ -1394,6 +1554,7 @@
   setupSyncStatus();
   setupIngredientSearch();
   setupRandomRecipe();
+  setupImageDialog();
 </script>
 
 </body>

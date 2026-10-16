@@ -10,24 +10,45 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class RecipeParserTest {
 
     @Test
-    void parseTagLine_extractsHashtags() {
-        assertEquals(List.of("pasta", "vegetarisch"), RecipeParser.parseTagLine("<!--tags: #pasta #vegetarisch-->"));
-        assertEquals(List.of("pasta"), RecipeParser.parseTagLine("<!--  tags:   #pasta   -->  "));
+    void parse_extractsHashtags() {
+        assertEquals(List.of("pasta", "vegetarisch"), RecipeParser.parse("<!--tags: #pasta #vegetarisch-->").tags());
+        assertEquals(List.of("pasta"), RecipeParser.parse("<!--  tags:   #pasta   -->  ").tags());
+        assertEquals(List.of("ok"), RecipeParser.parse("<!--tags: nohash # #ok-->").tags());
     }
 
     @Test
-    void parseTagLine_ignoresInvalidInput() {
-        assertEquals(List.of(), RecipeParser.parseTagLine(null));
-        assertEquals(List.of(), RecipeParser.parseTagLine("# Title"));
-        assertEquals(List.of("ok"), RecipeParser.parseTagLine("<!--tags: nohash # #ok-->"));
+    void parse_removesOnlyMetadataLines() {
+        assertEquals("# Title\n", RecipeParser.parse("<!--tags: #a-->\n# Title\n").markdown());
+        assertEquals("# Title\r\n", RecipeParser.parse("<!--tags: #a-->\r\n# Title\r\n").markdown());
+        assertEquals("", RecipeParser.parse("<!--tags: #a-->").markdown());
+        assertEquals("# Title\n", RecipeParser.parse("# Title\n").markdown());
     }
 
     @Test
-    void stripTagLine_removesOnlyTagLine() {
-        assertEquals("# Title\n", RecipeParser.stripTagLine("<!--tags: #a-->\n# Title\n"));
-        assertEquals("# Title\r\n", RecipeParser.stripTagLine("<!--tags: #a-->\r\n# Title\r\n"));
-        assertEquals("", RecipeParser.stripTagLine("<!--tags: #a-->"));
-        assertEquals("# Title\n", RecipeParser.stripTagLine("# Title\n"));
+    void parse_readsImagesInAnyOrderWithTags() {
+        RecipeParser.ParsedRecipe parsed = RecipeParser.parse(
+                "<!-- image: pizza/oben.jpg -->\n<!--tags: #a-->\n<!-- image: pizza.png -->\n# Pizza\n");
+
+        assertEquals(List.of(new RecipeImage("pizza/oben.jpg", null), new RecipeImage("pizza.png", null)), parsed.images());
+        assertEquals(List.of("a"), parsed.tags());
+        assertEquals("# Pizza\n", parsed.markdown());
+    }
+
+    @Test
+    void parse_readsImageCaptions() {
+        RecipeParser.ParsedRecipe parsed = RecipeParser.parse(
+                "<!-- image: pizza.jpg |  Frisch aus dem Ofen | heiß -->\n<!-- image: teig.jpg | -->\n<!-- image: | ohne Bild -->\n");
+
+        assertEquals(List.of(new RecipeImage("pizza.jpg", "Frisch aus dem Ofen | heiß"), new RecipeImage("teig.jpg", null)),
+                parsed.images());
+    }
+
+    @Test
+    void parse_readsMetadataOnlyAtTheTop() {
+        RecipeParser.ParsedRecipe parsed = RecipeParser.parse("# Pizza\n<!-- image: pizza.png -->\n");
+
+        assertEquals(List.of(), parsed.images());
+        assertEquals("# Pizza\n<!-- image: pizza.png -->\n", parsed.markdown());
     }
 
     @Test

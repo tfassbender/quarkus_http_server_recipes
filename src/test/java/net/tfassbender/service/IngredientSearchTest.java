@@ -98,6 +98,6 @@ class IngredientSearchTest {
     }
 
     private static IndexedRecipe recipe(String name, String title, List<String> tags, String ingredients) {
-        return new IndexedRecipe(new RecipeSummary(name, title, tags), "", IngredientSearch.ingredientWords(ingredients));
+        return new IndexedRecipe(new RecipeSummary(name, title, tags, List.of()), "", IngredientSearch.ingredientWords(ingredients));
     }
 }

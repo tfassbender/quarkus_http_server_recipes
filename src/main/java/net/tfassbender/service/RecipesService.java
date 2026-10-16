@@ -62,7 +62,7 @@ public class RecipesService {
         for (Path file : files) {
             String name = stripExtension(file.getFileName().toString());
             RecipeParser.ParsedRecipe parsed = RecipeParser.parse(Files.readString(file));
-            RecipeSummary summary = new RecipeSummary(name, parsed.title(), parsed.tags());
+            RecipeSummary summary = new RecipeSummary(name, parsed.title(), parsed.tags(), parsed.images());
             recipes.add(new IndexedRecipe(summary, formatter.toHtml(parsed.markdown()),
                     IngredientSearch.ingredientWords(parsed.ingredients())));
         }

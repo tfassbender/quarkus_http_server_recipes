@@ -23,18 +23,22 @@ class RecipesResourceTest {
                 .body("name", contains("ohne_titel", "spaghetti", "tomatensuppe"))
                 .body("[0].title", nullValue())
                 .body("[1].title", equalTo("Spaghetti Aglio e Olio"))
-                .body("[1].tags", contains("nudeln", "vegetarisch"));
+                .body("[1].tags", contains("nudeln", "vegetarisch"))
+                .body("[1].images.path", contains("spaghetti.png"))
+                .body("[1].images.caption", contains("Mit frischer Petersilie"))
+                .body("[2].images", empty());
     }
 
     @Test
-    void getRecipe_rendersMarkdownWithoutTagLine() {
+    void getRecipe_rendersMarkdownWithoutMetadataLines() {
         given()
                 .when().get("/recipes/spaghetti")
                 .then()
                 .statusCode(200)
                 .body(containsString("<h1>Spaghetti Aglio e Olio</h1>"))
                 .body(containsString("<table>"))
-                .body(not(containsString("tags:")));
+                .body(not(containsString("tags:")))
+                .body(not(containsString("image:")));
     }
 
     @Test
