@@ -223,6 +223,56 @@
       filter: brightness(1.15);
     }
 
+    .random-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4em;
+      margin-top: 0.6em;
+    }
+
+    .tag-toggle {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 0.2em 0.7em;
+      font-size: 0.85em;
+      cursor: pointer;
+    }
+
+    .tag-toggle:hover {
+      color: var(--text-main);
+    }
+
+    .tag-toggle.active {
+      background-color: var(--bg-accent);
+      border-color: var(--bg-accent);
+      color: #ffffff;
+    }
+
+    .random-pick {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+
+    #random-recipe-link {
+      flex: 1;
+      min-width: 0;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0.8em 1em;
+      font-size: 1.2em;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    #random-recipe-link:hover {
+      background-color: var(--bg-hover);
+    }
+
     ul {
       list-style: none;
       padding: 0;
@@ -560,6 +610,7 @@
       <button id="expand-all" class="icon-button" title="Alle ausklappen" aria-label="Alle ausklappen">&#10133;</button>
       <button id="collapse-all" class="icon-button" title="Alle einklappen" aria-label="Alle einklappen">&#10134;</button>
       <button id="show-ingredient-search" class="icon-button wide" title="Zutatensuche" aria-label="Zutatensuche">&#129365;&#128269;</button>
+      <button id="show-random-recipe" class="icon-button" title="Zufälliges Rezept" aria-label="Zufälliges Rezept">&#127922;</button>
       <button id="sync-now" class="icon-button" title="Rezepte jetzt aktualisieren" aria-label="Rezepte jetzt aktualisieren" hidden>&#128260;</button>
       <button id="toggle-wake-lock" class="icon-button" title="Bildschirm anlassen" aria-label="Bildschirm anlassen" aria-pressed="false">&#9728;&#65039;</button>
       <button id="show-help" class="icon-button" title="Hilfe" aria-label="Hilfe">&#10067;</button>
@@ -608,6 +659,7 @@
     <li>Favoriten werden lokal im Browser gespeichert (kein Server).</li>
     <li>Rezepte sind direkt verlinkbar &ndash; die URL enthält das aktuell ausgewählte Rezept.</li>
     <li>Liegen die Rezepte in einem Git-Repository, werden sie automatisch alle paar Minuten aktualisiert. Mit der Schaltfläche &#128260; geht es sofort (höchstens einmal pro Minute für alle Nutzer).</li>
+    <li>Mit der Schaltfläche &#127922; wird ein zufälliges Rezept vorgeschlagen. Optional lässt sich die Auswahl auf Rezepte mit bestimmten Tags und Zutaten einschränken.</li>
     <li>Mit der Schaltfläche &#9728;&#65039; bleibt der Bildschirm beim Kochen an und schaltet sich nicht automatisch ab (sofern vom Browser unterstützt).</li>
   </ul>
 
@@ -627,6 +679,24 @@
   </div>
   <p class="search-hint">Zutaten durch Leerzeichen trennen. Gesucht wird im Abschnitt &bdquo;Zutaten&ldquo;, auch nach Mehrzahl und zusammengesetzten Wörtern (<code>zwiebel</code> findet &bdquo;Lauchzwiebeln&ldquo;). <code>hack*</code> findet Wörter, die so beginnen, <code>*öl</code> Wörter, die so enden. Mit <code>#tag</code> werden Rezepte dieser Kategorie zuerst angezeigt.</p>
   <div id="ingredient-results"></div>
+  <div class="dialog-footer">
+    <button type="button" class="close">Schließen</button>
+  </div>
+</dialog>
+
+<dialog id="random-dialog" class="app-dialog">
+  <h2>Zufälliges Rezept</h2>
+  <div class="random-pick">
+    <button id="random-recipe-link" type="button" title="Rezept öffnen"></button>
+    <button id="random-next" class="icon-button" type="button" title="Neues zufälliges Rezept" aria-label="Neues zufälliges Rezept">&#127922;</button>
+  </div>
+  <h3>Tags &amp; Zutaten (optional)</h3>
+  <div id="random-filter-wrapper" class="search-wrapper">
+    <input type="text" id="random-filter" class="search-input" placeholder="z.&nbsp;B. #suppe kartoffel" autocomplete="off" />
+    <button id="clear-random-filter" class="clear-search" type="button" title="Filter leeren" aria-label="Filter leeren">&times;</button>
+  </div>
+  <div id="random-tags" class="random-tags"></div>
+  <p class="search-hint">Tags und Zutaten, die alle im Rezept vorkommen müssen (Zutaten wie in der Zutatensuche). <span id="random-count"></span></p>
   <div class="dialog-footer">
     <button type="button" class="close">Schließen</button>
   </div>
@@ -890,6 +960,8 @@
     document.addEventListener('click', (e) => {
       if (!isMobile()) return;
       if (document.body.classList.contains('sidebar-hidden')) return;
+      // dialogs are opened from the sidebar but aren't part of it, so taps inside them must not close it
+      if (e.target.closest('dialog')) return;
       const sidebar = document.getElementById('sidebar');
       const showBtn = document.getElementById('show-sidebar');
       if (!sidebar.contains(e.target) && e.target !== showBtn && !showBtn.contains(e.target)) {
@@ -975,6 +1047,7 @@
 
   const INGREDIENT_SEARCH_KEY = 'recipes:ingredientSearch';
   const INGREDIENT_CHIPS_KEY = 'recipes:ingredientChips';
+  const RANDOM_FILTER_KEY = 'recipes:randomFilter';
   let ingredientSearchRequest = 0;
 
   function readStorage(key, fallback) {
@@ -1110,6 +1183,110 @@
     return button;
   }
 
+  function setupRandomRecipe() {
+    const dialog = document.getElementById('random-dialog');
+    const input = document.getElementById('random-filter');
+    const wrapper = document.getElementById('random-filter-wrapper');
+    const link = document.getElementById('random-recipe-link');
+    let candidates = [];
+    let picked = null;
+    let requestId = 0;
+    const pickNext = () => {
+      picked = pickRandomRecipe(candidates, picked);
+      link.textContent = picked ? displayName(picked) : 'Keine passenden Rezepte gefunden.';
+      link.disabled = !picked;
+    };
+    const applyFilter = () => {
+      const filter = input.value;
+      writeStorage(RANDOM_FILTER_KEY, filter);
+      wrapper.classList.toggle('has-value', filter.length > 0);
+      renderRandomTags(filter, toggled => {
+        input.value = toggled;
+        applyFilter();
+      });
+      const currentRequest = ++requestId;
+      findRandomCandidates(filter).then(recipes => {
+        // results of outdated filters can arrive late while typing; only the latest one counts
+        if (currentRequest !== requestId) return;
+        candidates = recipes;
+        document.getElementById('random-count').textContent = recipes.length === 1 ? '1 passendes Rezept.' : `${recipes.length} passende Rezepte.`;
+        pickNext();
+      });
+    };
+    const debouncedFilter = debounce(applyFilter, 200);
+    input.value = readStorage(RANDOM_FILTER_KEY, '');
+    input.addEventListener('input', debouncedFilter);
+    document.getElementById('clear-random-filter').onclick = () => {
+      input.value = '';
+      applyFilter();
+      input.focus();
+    };
+    document.getElementById('show-random-recipe').onclick = () => {
+      openDialog(dialog);
+      // re-run on every open, since the recipes may have changed through a sync
+      applyFilter();
+    };
+    document.getElementById('random-next').onclick = pickNext;
+    link.onclick = () => {
+      dialog.close();
+      selectRecipe(picked.name, true);
+    };
+  }
+
+  /**
+   * Resolves the recipes having all tags and ingredients of the filter. Ingredients are matched by the server's
+   * ingredient search (same stemming and wildcard rules); a result only counts if every ingredient was found.
+   */
+  function findRandomCandidates(filter) {
+    if (!filter.trim()) return Promise.resolve(allRecipes);
+    return fetch(`/recipes/search?q=${encodeURIComponent(filter)}`)
+      .then(response => {
+        if (!response.ok) throw new Error(`Search failed (${response.status})`);
+        return response.json();
+      })
+      .then(result => {
+        const names = new Set(result.results
+            .filter(r => r.score === result.ingredientCount)
+            .map(r => r.name));
+        return allRecipes.filter(r => names.has(r.name));
+      })
+      .catch(error => {
+        console.error(error);
+        return [];
+      });
+  }
+
+  // one toggle button per tag; it adds or removes "#tag" in the filter text, which stays the single source of truth
+  function renderRandomTags(filter, onToggle) {
+    const terms = filter.trim().toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const tags = [...new Set(allRecipes.flatMap(r => r.tags || []))].sort((a, b) => a.localeCompare(b));
+    const buttons = tags.map(tag => {
+      const term = '#' + tag.toLowerCase();
+      const active = terms.includes(term);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'tag-toggle';
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+      button.textContent = '#' + tag;
+      button.onclick = () => {
+        const toggled = active ? terms.filter(t => t !== term) : [...terms, term];
+        onToggle(toggled.join(' '));
+      };
+      return button;
+    });
+    document.getElementById('random-tags').replaceChildren(...buttons);
+  }
+
+  function pickRandomRecipe(recipes, previous) {
+    // avoid showing the same recipe twice in a row, which would look like the button did nothing
+    const candidates = recipes.length > 1 && previous
+        ? recipes.filter(r => r.name !== previous.name)
+        : recipes;
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
   function searchHint(text) {
     const hint = document.createElement('p');
     hint.className = 'search-hint';
@@ -1216,6 +1393,7 @@
   setupWakeLock();
   setupSyncStatus();
   setupIngredientSearch();
+  setupRandomRecipe();
 </script>
 
 </body>
